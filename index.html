@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบรับเรื่องและแจ้งพฤติกรรมไม่เหมาะสมนักเรียน/นักศึกษา | วิทยาลัยเทคนิควังน้ำเย็น</title>
+    
+    <!-- ========================================== -->
+    <!-- 📲 Step 3: PWA Meta Tags & Manifest Link -->
+    <!-- ========================================== -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7c3aed">
+
+    <!-- ตั้งค่าพิเศษสำหรับ iOS (Safari) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ร้องเรียนออนไลน์">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3596/3596091.png">
+
+    <!-- สคริปต์ลงทะเบียน Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('✅ Service Worker ลงทะเบียนสำเร็จ!', reg))
+            .catch((err) => console.log('❌ Service Worker ล้มเหลว:', err));
+        });
+      }
+    </script>
+    <!-- ========================================== -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+    </style>
+</head>
+<body class="bg-purple-50/50 text-slate-800 min-h-screen p-4 md:p-10">
+    
+    <!-- ปุ่มย้อนกลับหน้าหลัก ลอยสวย ๆ อยู่มุมซ้ายบน -->
+    <div style="position: absolute; top: 20px; left: 20px; z-index: 50;">
+        <a href="home.html" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background-color: white; color: #7c3aed; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 9999px; border: 1px solid #ddd6fe; box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.08); transition: 0.2s;" onmouseover="this.style.backgroundColor='#f5f3ff'; this.style.transform='scale(1.03)'" onmouseout="this.style.backgroundColor='white'; this.style.transform='scale(1)'">
+            <i class="fa-solid fa-arrow-left"></i> ย้อนกลับหน้าหลัก
+        </a>
+    </div>
+
+    <img src="รูปภาพ1-removebg-preview (1).png" alt="โลโก้วิทยาลัยเทคนิควังน้ำเย็น" style="width: 145px; height: 145px; object-fit: contain; margin: 0 auto 20px auto; display: block; filter: drop-shadow(0 4px 8px rgba(107, 33, 168, 0.15));">
+
+    <div class="max-w-3xl mx-auto">
+        <header class="text-center mb-10">
+            <span class="text-5xl block mb-2"></span>
+            <h1 class="text-3xl font-extrabold text-purple-500 tracking-wide">ระบบรับเรื่องและแจ้งพฤติกรรมไม่เหมาะสมนักเรียน/นักศึกษา</h1>
+            <p class="text-purple-950 font-bold text-lg mt-1">วิทยาลัยเทคนิควังน้ำเย็น</p>
+        </header>
+
+        <main class="bg-white p-8 rounded-2xl shadow-xl border border-purple-100">
+            <form id="complaintForm" class="space-y-6">
+                
+                <div class="bg-purple-50/30 p-5 rounded-xl border border-purple-100 space-y-4">
+                    <h3 class="text-sm font-bold text-purple-900 flex items-center gap-1">📋 ข้อมูลผู้ส่งเรื่องแจ้ง</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-purple-950">ชื่อ - นามสกุล ผู้แจ้ง</label>
+                            <input type="text" id="reporter_name" required class="w-full p-2.5 bg-white border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-sm" placeholder="เช่น นายสมชาย ใจดี">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-purple-950">รหัสนักศึกษา</label>
+                            <input type="text" id="student_id" required class="w-full p-2.5 bg-white border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-sm" placeholder="เช่น 6630xxxxxxx">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🌟 รายการสาขาวิชา -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-purple-950">แผนกสาขาวิชา</label>
+                    <select id="department" class="w-full p-3 border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                        <option value="ช่างยนต์">🚗 ช่างยนต์</option>
+                        <option value="ช่างซ่อมบำรุง">👨‍🏭 ช่างซ่อมบำรุง</option>
+                        <option value="ช่างไฟฟ้า">⚡ ช่างไฟฟ้า</option>
+                        <option value="ช่างอิเล็กทรอนิกส์">📟 ช่างอิเล็กทรอนิกส์</option>
+                        <option value="ค้าปลีก">📈 ค้าปลีก</option>
+                        <option value="คอมพิวเตอร์ธุรกิจ / เทคโนโลยีธุรกิจดิจิทัล">💻 คอมพิวเตอร์ธุรกิจ / เทคโนโลยีธุรกิจดิจิทัล</option>
+                        <option value="การบัญชี">📊 การบัญชี</option>
+                        <option value="การตลาด">📈 การตลาด</option>
+                        <option value="สาระสนเทศ">💻 สาระสนเทศ</option>
+                        <option value="การจัดการสำนักงานธุระกิจดิจิทัล">📊 การจัดการสำนักงานธุระกิจดิจิทัล</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-purple-950">หัวข้อเรื่องที่ต้องการแจ้ง</label>
+                    <input type="text" id="title" required class="w-full p-3 border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500" placeholder="กรุณาระบุหัวข้อปัญหา">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-purple-950">หมวดหมู่ปัญหา</label>
+                    <select id="category" class="w-full p-3 border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                        <option value="พฤติกรรมที่ไม่เหมาะสม">👤 พฤติกรรมที่ไม่เหมาะสม</option>
+                        <option value="ข้อเสนอแนะ / อื่นๆ">💡 ข้อเสนอแนะ / อื่นๆ</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-purple-950">รายละเอียดของปัญหา</label>
+                    <textarea id="detail" required rows="4" class="w-full p-3 border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500" placeholder="โปรดระบุรายละเอียดเพิ่มเติม"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-purple-950">แนบภาพหลักฐานประกอบ (ถ้ามี)</label>
+                    <input type="file" id="imageInput" accept="image/*" class="w-full p-2.5 border border-dashed border-purple-200 rounded-lg bg-purple-50/20 file:mr-4 file:py-1.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 cursor-pointer">
+                </div>
+
+                <div class="flex items-center gap-3 p-4 bg-purple-50/40 rounded-lg border border-purple-100">
+                    <input type="checkbox" id="is_anonymous" class="w-5 h-5 accent-purple-600">
+                    <label for="is_anonymous" class="text-sm font-medium text-purple-950">ต้องการปกปิดตัวตน (แอดมินเห็นข้อมูล แต่จะไม่โชว์ต่อสาธารณะ)</label>
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition duration-200 shadow-md cursor-pointer">
+                    ส่งเรื่องร้องเรียน
+                </button>
+            </form>
+
+            <div style="text-align: right; margin-top: 24px; padding-top: 16px; border-top: 1px dashed #f3e8ff;">
+                <a href="login.html" style="display: inline-block; padding: 10px 20px; background-color: #6b21a8; color: white; text-decoration: none; border-radius: 12px; font-size: 14px; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                    <i class="fa-solid fa-user-shield mr-1.5"></i> เข้าสู่ระบบแอดมิน
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <div id="statusModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 transition-all duration-300">
+        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden text-center shadow-2xl border border-purple-50 animate-in fade-in zoom-in-95 duration-200">
+            <div id="modalHeader" class="p-8 text-white flex flex-col items-center justify-center gap-3">
+                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
+                    <i id="modalIcon" class="text-4xl text-white"></i>
+                </div>
+                <h3 id="modalTitle" class="text-xl font-bold tracking-wide"></h3>
+            </div>
+            <div class="p-6 bg-white">
+                <p id="modalMessage" class="text-slate-700 font-medium text-base"></p>
+                <p class="text-slate-400 text-xs mt-2">วิทยาลัยเทคนิควังน้ำเย็น</p>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-100">
+                <button type="button" id="modalButton" class="w-full py-2.5 rounded-xl font-bold text-sm shadow transition duration-200 cursor-pointer">
+                    ตกลง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function closeModal() { 
+            document.getElementById('statusModal').classList.add('hidden'); 
+        }
+
+        function showModal(isSuccess, message) {
+            const modal = document.getElementById('statusModal');
+            const header = document.getElementById('modalHeader');
+            const icon = document.getElementById('modalIcon');
+            const title = document.getElementById('modalTitle');
+            const msg = document.getElementById('modalMessage');
+            const btn = document.getElementById('modalButton');
+            modal.classList.remove('hidden');
+
+            if (isSuccess) {
+                header.className = "p-8 bg-purple-900 text-white flex flex-col items-center justify-center gap-3";
+                icon.className = "fa-solid fa-circle-check text-4xl text-amber-400"; 
+                title.textContent = "ส่งเรื่องร้องเรียนสำเร็จ";
+                btn.className = "w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-purple-950 rounded-xl font-bold text-sm shadow transition duration-200 cursor-pointer";
+                btn.textContent = "รับทราบ";
+                
+                btn.onclick = function() {
+                    document.getElementById('complaintForm').reset();
+                    closeModal();
+                };
+            } else {
+                header.className = "p-8 bg-rose-600 text-white flex flex-col items-center justify-center gap-3";
+                icon.className = "fa-solid fa-circle-xmark text-4xl text-white";
+                title.textContent = "เกิดข้อผิดพลาด";
+                btn.className = "w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm shadow transition duration-200 cursor-pointer";
+                btn.textContent = "ลองอีกครั้ง";
+                
+                btn.onclick = closeModal;
+            }
+            msg.textContent = message;
+        }
+
+        document.getElementById('complaintForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            const formData = new FormData();
+            
+            const reporterName = document.getElementById('reporter_name').value;
+            const dept = document.getElementById('department').value;
+            formData.append('reporter_name', `${reporterName} (${dept})`);
+            
+            formData.append('student_id', document.getElementById('student_id').value); 
+            formData.append('title', document.getElementById('title').value);
+            formData.append('category', document.getElementById('category').value);
+            formData.append('description', document.getElementById('detail').value);
+            formData.append('is_anonymous', document.getElementById('is_anonymous').checked ? 1 : 0);
+            
+            const imageFile = document.getElementById('imageInput').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/complaints', {
+                    method: 'POST',
+                    body: formData 
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showModal(true, "ระบบได้รับการแจ้งเรื่องเสร็จสิ้น ข้อมูลของท่านถูกส่งต่อไปยังเจ้าหน้าที่ผู้เกี่ยวข้องแล้ว");
+                } else {
+                    showModal(false, result.message);
+                }
+            } catch (error) {
+                showModal(false, "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+            }
+        });
+    </script>
+</body>
+</html>

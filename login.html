@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบผู้ดูแลระบบ | วิทยาลัยเทคนิควังน้ำเย็น</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
+        body { font-family: 'Kanit', sans-serif; }
+    </style>
+</head>
+<body class="bg-purple-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl border border-purple-100 w-full max-w-md">
+        <div class="text-center mb-6">
+            <div class="w-20 h-20 bg-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                <i class="fa-solid fa-lock text-4xl text-purple-900"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-purple-900">สำหรับผู้ดูแลระบบ</h2>
+            <p class="text-slate-500 text-sm mt-1">กรุณาเข้าสู่ระบบเพื่อจัดการเรื่องร้องเรียน</p>
+        </div>
+
+        <!-- กล่องแจ้งเตือน Error -->
+        <div id="errorBox" class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-sm flex items-center gap-2">
+            <i class="fa-solid fa-circle-xmark"></i>
+            <span id="errorMessage">ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง</span>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
+                <input type="text" id="username" required class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-purple-500 bg-slate-50" placeholder="ระบุชื่อผู้ใช้งาน">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">รหัสผ่าน (Password)</label>
+                <input type="password" id="password" required class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-purple-500 bg-slate-50" placeholder="รหัสผ่าน">
+            </div>
+            <button type="submit" class="w-full py-3.5 bg-amber-400 hover:bg-amber-500 text-purple-950 font-bold rounded-xl transition duration-200 shadow-md mt-2 cursor-pointer">
+                เข้าสู่ระบบ
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const errorBox = document.getElementById('errorBox');
+        const errorMessage = document.getElementById('errorMessage');
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorBox.classList.remove('hidden');
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.classList.add('hidden');
+
+            const usernameInput = document.getElementById('username').value;
+            const passwordInput = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 🌟 บันทึกข้อมูลแอดมินเก็บไว้ในเครื่องเบราว์เซอร์ใช้งานจริง
+                    const adminData = {
+                        name: result.admin.name,
+                        email: result.admin.email,
+                        avatar_url: result.admin.avatar_url
+                    };
+                    localStorage.setItem('adminUser', JSON.stringify(adminData));
+
+                    // เปลี่ยนหน้าไปยังหน้าจัดการ
+                    window.location.href = 'admin.html';
+                } else {
+                    showError(result.message);
+                }
+            } catch (error) {
+                showError("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์หลังบ้านได้");
+            }
+        });
+    </script>
+</body>
+</html>

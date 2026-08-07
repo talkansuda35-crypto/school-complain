@@ -1,0 +1,21 @@
+{
+  "short_name": "รับเรื่องร้องเรียน",
+  "name": "ระบบรับเรื่องร้องเรียน - วิทยาลัยเทคนิควังน้ำเย็น",
+  "icons": [
+    {
+      "src": "รูปภาพ1-removebg-preview (1).png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "รูปภาพ1-removebg-preview (1).png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "portrait"
+}

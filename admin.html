@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการเรื่องร้องเรียน (Admin) | วิทยาลัยเทคนิควังน้ำเย็น</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Kanit', sans-serif; }
+        body { background-color: #f8fafc; color: #1e293b; }
+        .navbar { background: linear-gradient(135deg, #4f46e5, #3730a3); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .navbar h1 { font-size: 20px; font-weight: 500; }
+        .admin-profile { display: flex; align-items: center; gap: 12px; background-color: rgba(255, 255, 255, 0.1); padding: 6px 16px; border-radius: 50px; border: 1px solid rgba(255, 255, 255, 0.15); transition: all 0.2s; }
+        .admin-profile:hover { background-color: rgba(255, 255, 255, 0.2); transform: translateY(-1px); }
+        .admin-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #38bdf8; background-color: #e2e8f0; }
+        .admin-name { font-size: 14px; font-weight: 500; color: #f1f5f9; }
+        .container { max-width: 1300px; margin: 30px auto; padding: 0 20px; }
+        .section-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: #312e81; }
+        .action-bar { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+        .btn-excel { background-color: #22c55e; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: 500; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2); }
+        .btn-excel:hover { background-color: #16a34a; transform: translateY(-1px); }
+        .table-responsive { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); border: 1px solid #e2e8f0; margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background-color: #f1f5f9; color: #475569; padding: 16px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 16px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        tr:hover { background-color: #f8fafc; }
+        .status-select { padding: 6px 12px; border-radius: 6px; font-size: 14px; font-weight: 500; border: 1px solid #cbd5e1; background-color: white; cursor: pointer; outline: none; }
+        .status-select:focus { border-color: #6366f1; }
+        .img-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #e2e8f0; transition: transform 0.2s; }
+        .img-thumb:hover { transform: scale(1.1); }
+        .no-img { color: #94a3b8; font-size: 14px; font-style: italic; }
+        .logout-btn { background-color: rgba(244, 63, 94, 0.2); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.4); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 500; transition: 0.2s; }
+        .logout-btn:hover { background-color: rgba(244, 63, 94, 0.4); color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h1>ระบบจัดการเรื่องร้องเรียน (ผู้ดูแลระบบ) วิทยาลัยเทคนิควังน้ำเย็น</h1>
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <!-- โครงสร้างโปรไฟล์สำหรับคลิกเปลี่ยนรูปภาพ -->
+            <div class="admin-profile" style="cursor: pointer;" onclick="triggerAvatarUpload()" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์">
+                <img id="currentAdminAvatar" src="https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff" class="admin-avatar" alt="Admin Avatar">
+                <span id="currentAdminName" class="admin-name">กำลังโหลด...</span>
+                <input type="file" id="avatarFileInput" accept="image/*" style="display: none;" onchange="uploadNewAvatar(this)">
+            </div>
+            
+            <button class="logout-btn" onclick="handleLogout()">
+                <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- ส่วนที่ 1: ตารางเรื่องร้องเรียน -->
+        <div class="section-title">
+            <i class="fa-solid fa-list-check"></i> รายการรับเรื่องร้องเรียนทั้งหมด
+        </div>
+
+        <div class="action-bar">
+            <button class="btn-excel" onclick="downloadExcel()">
+                📊 ดาวน์โหลดรายงาน Excel
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>วัน-เวลาที่แจ้ง</th>
+                        <th>หัวข้อเรื่อง</th>
+                        <th>หมวดหมู่</th>
+                        <th>ผู้แจ้งเรื่อง</th>
+                        <th>รหัสนักเรียน</th>
+                        <th>รายละเอียด</th>
+                        <th>หลักฐาน</th>
+                        <th>สถานะระบบ</th>
+                    </tr>
+                </thead>
+                <tbody id="complaintsTableBody">
+                    <tr><td colspan="8" style="text-align: center; color: #94a3b8;">กำลังโหลดข้อมูล...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ส่วนที่ 2: ตารางประวัติการเข้าใช้งาน -->
+        <div class="section-title" style="margin-top: 50px;">
+            <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการเข้าใช้งานระบบ (Admin Login Logs)
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 80px; text-align: center;">ลำดับ</th>
+                        <th>รูปโปรไฟล์</th>
+                        <th>ผู้ดูแลระบบ (Admin)</th>
+                        <th>อีเมลบัญชี</th>
+                        <th>วัน-เวลาที่เข้าใช้ระบบ</th>
+                        <th>สถานะการเข้าใช้งาน</th>
+                    </tr>
+                </thead>
+                <tbody id="loginLogsTableBody">
+                    <tr><td colspan="6" style="text-align: center; color: #94a3b8;">กำลังโหลดประวัติการเข้าใช้งาน...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api/complaints';
+        const LOGS_API_URL = 'http://localhost:3000/api/admin/login-logs';
+
+        // 📥 1. โหลดข้อมูลเรื่องร้องเรียน
+        function loadComplaints() {
+            fetch(API_URL)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('complaintsTableBody');
+                    tbody.innerHTML = '';
+
+                    if (!data || data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #94a3b8;">ยังไม่มีข้อมูลเรื่องร้องเรียนในระบบ</td></tr>`;
+                        return;
+                    }
+
+                    data.forEach(item => {
+                        const date = new Date(item.created_at);
+                        const thaiDate = `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear() + 543} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                        const nameDisplay = item.is_anonymous === 1 ? '<span style="color: #64748b; font-style: italic;">ปกปิดตัวตน</span>' : (item.reporter_name || 'ไม่ระบุชื่อ');
+                        const phoneDisplay = item.is_anonymous === 1 ? '<span style="color: #64748b; font-style: italic;">ปกปิดตัวตน</span>' : (item.reporter_phone || '-');
+                        const detailDisplay = item.description || '-';
+                        
+                        const imageDisplay = item.image_path 
+                            ? `<a href="http://localhost:3000/${item.image_path}" target="_blank"><img src="http://localhost:3000/${item.image_path}" class="img-thumb"></a>`
+                            : `<span class="no-img">ไม่มีรูปแนบ</span>`;
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${thaiDate}</td>
+                            <td><b>${item.title}</b></td>
+                            <td><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 13px;">${item.category}</span></td>
+                            <td>${nameDisplay}</td>
+                            <td>${phoneDisplay}</td>
+                            <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${detailDisplay}">${detailDisplay}</td>
+                            <td>${imageDisplay}</td>
+                            <td>
+                                <select class="status-select" onchange="updateStatus(${item.id}, this.value)">
+                                    <option value="รอการดำเนินการ" ${item.status === 'รอการดำเนินการ' ? 'selected' : ''}>รอการดำเนินการ</option>
+                                    <option value="กำลังดำเนินการ" ${item.status === 'กำลังดำเนินการ' ? 'selected' : ''}>กำลังดำเนินการ</option>
+                                    <option value="ดำเนินการเสร็จสิ้น" ${item.status === 'ดำเนินการเสร็จสิ้น' ? 'selected' : ''}>ดำเนินการเสร็จสิ้น</option>
+                                </select>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => console.error('❌ โหลดข้อมูลล้มเหลว:', err));
+        }
+
+        // 🔄 2. อัปเดตสถานะงาน
+        function updateStatus(id, newStatus) {
+            fetch(`${API_URL}/${id}/status`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(async res => {
+                const data = await res.json().catch(() => ({})); 
+                
+                if (res.ok) {
+                    console.log('✅ อัปเดตสถานะสำเร็จ:', data);
+                    loadComplaints(); 
+                } else {
+                    console.error('❌ Server Error:', data);
+                    alert(`เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ${data.error || 'ไม่สามารถอัปเดตสถานะได้'}`);
+                }
+            })
+            .catch(err => {
+                console.error('❌ Network Error:', err);
+                alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่าฝั่งหลังบ้าน (Backend) ทำงานอยู่หรือไม่');
+            });
+        }
+
+        // 📊 3. ดาวน์โหลด Excel
+        function downloadExcel() {
+            window.open('http://localhost:3000/api/complaints/download-excel', '_blank');
+        }
+
+        // 🔒 4. ระบบความปลอดภัยตรวจสอบแอดมิน
+        function checkActiveAdmin() {
+            const activeAdmin = JSON.parse(localStorage.getItem('adminUser'));
+            
+            if (activeAdmin) {
+                document.getElementById('currentAdminName').textContent = activeAdmin.name || 'ผู้ดูแลระบบ';
+                
+                let topAvatarImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(activeAdmin.name || 'Admin')}&background=c084fc&color=fff&bold=true`;
+                
+                if (activeAdmin.avatar_url) {
+                    if (activeAdmin.avatar_url.startsWith('http')) {
+                        topAvatarImg = activeAdmin.avatar_url;
+                    } else {
+                        topAvatarImg = `http://localhost:3000/${activeAdmin.avatar_url}`;
+                    }
+                }
+                document.getElementById('currentAdminAvatar').src = topAvatarImg;
+            } else {
+                document.getElementById('currentAdminName').textContent = 'ไม่ได้เข้าสู่ระบบ';
+                alert('กรุณาเข้าสู่ระบบก่อนใช้งานครับ');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // 📥 5. โหลดประวัติการล็อกอินแสดงที่ตารางล่าง
+        function loadLoginLogs() {
+            fetch(LOGS_API_URL)
+                .then(res => res.json())
+                .then(logs => {
+                    const logsTbody = document.getElementById('loginLogsTableBody');
+                    logsTbody.innerHTML = '';
+
+                    if (!logs || logs.length === 0) {
+                        logsTbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8;">ยังไม่มีประวัติการล็อกอินในระบบ</td></tr>`;
+                        return;
+                    }
+
+                    logs.forEach((log, index) => {
+                        const logDate = new Date(log.login_time);
+                        const formattedLogTime = `${logDate.getDate()}/${logDate.getMonth()+1}/${logDate.getFullYear() + 543} ${String(logDate.getHours()).padStart(2, '0')}:${String(logDate.getMinutes()).padStart(2, '0')}:${String(logDate.getSeconds()).padStart(2, '0')} น.`;
+                        
+                        let avatarImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(log.admin_name || 'Admin')}&background=cbd5e1&color=475569`;
+
+                        if (log.avatar_url) {
+                            if (log.avatar_url.startsWith('http')) {
+                                avatarImg = log.avatar_url;
+                            } else {
+                                avatarImg = `http://localhost:3000/${log.avatar_url}`;
+                            }
+                        }
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="text-align: center; font-weight: 500; color: #64748b;">${index + 1}</td>
+                            <td><img src="${avatarImg}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0;"></td>
+                            <td><strong>${log.admin_name || 'ไม่ทราบชื่อ'}</strong></td>
+                            <td>${log.admin_email || '-'}</td>
+                            <td style="color: #4f46e5; font-weight: 500;">${formattedLogTime}</td>
+                            <td><span style="background-color: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 50px; font-size: 12px; font-weight: 600;">🟢 เข้าสู่ระบบสำเร็จ</span></td>
+                        `;
+                        logsTbody.appendChild(tr);
+                    });
+                }).catch(err => {
+                    document.getElementById('loginLogsTableBody').innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ef4444;">ไม่สามารถดึงข้อมูลประวัติได้</td></tr>`;
+                });
+        }
+
+        // 📸 6. ฟังก์ชันสั่งให้กล่องเลือกไฟล์เด้งขึ้นมาเมื่อคลิกที่โปรไฟล์
+        function triggerAvatarUpload() {
+            const fileInput = document.getElementById('avatarFileInput');
+            if (fileInput) {
+                fileInput.click();
+            } else {
+                console.error("❌ ไม่พบแท็ก input ที่มี id='avatarFileInput'");
+            }
+        }
+
+        // 📤 7. ฟังก์ชันอัปเดตรูปโปรไฟล์เมื่อแอดมินเลือกรูปภาพเสร็จแล้ว
+        function uploadNewAvatar(input) {
+            if (!input.files || !input.files[0]) return;
+
+            const file = input.files[0];
+            const activeAdmin = JSON.parse(localStorage.getItem('adminUser'));
+            
+            if (!activeAdmin) {
+                alert('ไม่พบข้อมูลแอดมิน กรุณาล็อกอินใหม่อีกครั้ง');
+                return;
+            }
+
+            // ดึงค่าระบุตัวตนส่งไปให้หลังบ้าน
+            const adminIdentifier = activeAdmin.username || activeAdmin.email || activeAdmin.name || 'Admin';
+
+            const formData = new FormData();
+            formData.append('avatar', file);
+            formData.append('username', adminIdentifier);
+
+            fetch('http://localhost:3000/api/admin/update-avatar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('🎉 เปลี่ยนรูปโปรไฟล์สำเร็จแล้วครับ!');
+                    
+                    // ปรับรูปภาพบนหน้าจอทันที
+                    const fullAvatarUrl = data.avatar_url.startsWith('http') 
+                        ? data.avatar_url 
+                        : `http://localhost:3000/${data.avatar_url}`;
+                        
+                    document.getElementById('currentAdminAvatar').src = fullAvatarUrl;
+                    
+                    // อัปเดตข้อมูลเก็บไว้ใน LocalStorage
+                    activeAdmin.avatar_url = data.avatar_url;
+                    localStorage.setItem('adminUser', JSON.stringify(activeAdmin));
+                    
+                    // สั่งโหลดตารางล็อกอินด้านล่างใหม่ให้รูปอัปเดตตามด้วย
+                    loadLoginLogs();
+                } else {
+                    alert('❌ อัปโหลดรูปภาพล้มเหลว: ' + (data.error || 'เกิดข้อผิดพลาด'));
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์หลังบ้านได้');
+            });
+        }
+
+        // 🚪 ออกจากระบบ
+        function handleLogout() {
+            localStorage.removeItem('adminUser');
+            location.href = 'login.html';
+        }
+
+        window.onload = function() {
+            checkActiveAdmin();
+            loadComplaints();
+            loadLoginLogs();
+        };
+    </script>
+</body>
+</html>
