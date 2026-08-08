@@ -61,7 +61,7 @@ db.connect((err) => {
     }
     console.log('💻 เชื่อมต่อฐานข้อมูลสำเร็จ!');
 
-    // 🛠️ สร้างตาราง complaints อัตโนมัติถ้าหากยังไม่มี
+    // 🛠️ สร้างตาราง complaints อัตโนมัติ
     const createComplaintsTable = `
         CREATE TABLE IF NOT EXISTS complaints (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -76,12 +76,9 @@ db.connect((err) => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `;
-    db.query(createComplaintsTable, (tableErr) => {
-        if (tableErr) console.error('❌ สร้างตาราง complaints ไม่สำเร็จ:', tableErr);
-        else console.log('✅ ตรวจสอบ/สร้างตาราง complaints เรียบร้อย!');
-    });
+    db.query(createComplaintsTable);
 
-    // 🛠️ สร้างตาราง admins อัตโนมัติ
+    // 🛠️ สร้างตาราง admins และเพิ่ม Admin เริ่มต้นให้อัตโนมัติ
     const createAdminsTable = `
         CREATE TABLE IF NOT EXISTS admins (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -94,8 +91,14 @@ db.connect((err) => {
         );
     `;
     db.query(createAdminsTable, (tableErr) => {
-        if (tableErr) console.error('❌ สร้างตาราง admins ไม่สำเร็จ:', tableErr);
-        else console.log('✅ ตรวจสอบ/สร้างตาราง admins เรียบร้อย!');
+        if (!tableErr) {
+            // สร้างบัญชีผู้ใช้ Admin เริ่มต้น (Username: admin / Password: admin)
+            const insertDefaultAdmin = `
+                INSERT IGNORE INTO admins (username, password, name, email) 
+                VALUES ('admin', 'admin', 'ผู้ดูแลระบบ', 'admin@school.com')
+            `;
+            db.query(insertDefaultAdmin);
+        }
     });
 
     // 🛠️ สร้างตาราง admin_login_logs อัตโนมัติ
@@ -108,10 +111,7 @@ db.connect((err) => {
             login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `;
-    db.query(createLogsTable, (tableErr) => {
-        if (tableErr) console.error('❌ สร้างตาราง admin_login_logs ไม่สำเร็จ:', tableErr);
-        else console.log('✅ ตรวจสอบ/สร้างตาราง admin_login_logs เรียบร้อย!');
-    });
+    db.query(createLogsTable);
 });
 
 // 🔑 1. API สำหรับการเข้าสู่ระบบ (Login)
@@ -169,10 +169,6 @@ app.post('/api/admin/update-avatar', uploadAvatar.single('avatar'), (req, res) =
     if (!req.file) {
         return res.status(400).json({ success: false, error: 'กรุณาเลือกรูปภาพก่อนกดอัปโหลดครับ' });
     }
-    
-    if (!username) {
-        return res.status(400).json({ success: false, error: 'ไม่พบข้อมูลผู้ใช้งานสำหรับอัปเดต' });
-    }
 
     const avatarUrl = req.file.path.replace(/\\/g, "/"); 
 
@@ -188,27 +184,11 @@ app.post('/api/admin/update-avatar', uploadAvatar.single('avatar'), (req, res) =
             return res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาดในการบันทึกฐานข้อมูล' });
         }
         
-        if (result.affectedRows === 0) {
-            const fallbackSql = "UPDATE admins SET avatar_url = ? LIMIT 1";
-            db.query(fallbackSql, [avatarUrl], (fallbackErr, fallbackResult) => {
-                if (fallbackErr || fallbackResult.affectedRows === 0) {
-                    return res.status(404).json({ success: false, error: 'ไม่พบรายชื่อแอดมินในฐานข้อมูล' });
-                }
-                console.log(`🎯 [Fallback] อัปเดตรูปภาพโปรไฟล์แอดมินแถวแรกสำเร็จ!`);
-                return res.json({ 
-                    success: true, 
-                    message: 'อัปเดตรูปโปรไฟล์สำเร็จ', 
-                    avatar_url: avatarUrl 
-                });
-            });
-        } else {
-            console.log(`🎯 อัปเดตรูปภาพโปรไฟล์แอดมิน [${username}] สำเร็จ!`);
-            res.json({ 
-                success: true, 
-                message: 'อัปเดตรูปโปรไฟล์สำเร็จ', 
-                avatar_url: avatarUrl 
-            });
-        }
+        res.json({ 
+            success: true, 
+            message: 'อัปเดตรูปโปรไฟล์สำเร็จ', 
+            avatar_url: avatarUrl 
+        });
     });
 });
 
@@ -321,12 +301,11 @@ app.put('/api/complaints/:id/status', (req, res) => {
             return res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการอัปเดตข้อมูลบนระบบฐานข้อมูล" });
         }
         
-        console.log(`🎯 อัปเดตสถานะเรื่องร้องเรียน ID: ${id} เป็น [${status}] เรียบร้อย!`);
         res.status(200).json({ success: true, message: "อัปเดตสถานะสำเร็จเรียบร้อยแล้ว" });
     });
 });
 
-// 🚀 สั่งรัน Express ผ่าน Dynamic Port ของ Render
+// 🚀 สั่งรัน Express
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
