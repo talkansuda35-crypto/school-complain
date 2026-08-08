@@ -13,13 +13,13 @@ app.use(express.urlencoded({ extended: true }));
 // 🌟 เปิดให้หน้าบ้านดึงรูปภาพไปโชว์ได้
 app.use('/uploads', express.static('uploads')); 
 
-// 📲 เปิดให้เรียกใช้งานไฟล์ PWA
+// 📲 เปิดให้เรียกใช้งานไฟล์ static / PWA
 app.use(express.static('./')); 
 
 // 🌟 สร้างโฟลเดอร์ uploads อัตโนมัติถ้าหากยังไม่มี
 const uploadDir = './uploads';
 if (!fs.existsSync(uploadDir)){
-    fs.mkdirSync(uploadDir);
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 // 📸 1. ตั้งค่าการเก็บรูปภาพหลักฐานเรื่องร้องเรียน
@@ -44,14 +44,14 @@ const avatarStorage = multer.diskStorage({
 });
 const uploadAvatar = multer({ storage: avatarStorage });
 
-// 🔌 เชื่อมต่อฐานข้อมูล MySQL (ปรับรองรับทั้ง Local และ Render + Aiven)
+// 🔌 เชื่อมต่อฐานข้อมูล MySQL (รองรับทั้ง Local, Render และ Aiven Cloud)
 const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'school_complain',
     port: process.env.DB_PORT || 3306,
-    ssl: process.env.DB_HOST ? { rejectUnauthorized: false } : false // 👈 รองรับ Aiven Cloud
+    ssl: process.env.DB_HOST ? { rejectUnauthorized: false } : false
 });
 
 db.connect((err) => {
@@ -61,7 +61,7 @@ db.connect((err) => {
     }
     console.log('💻 เชื่อมต่อฐานข้อมูลสำเร็จ!');
 
-    // 🛠️ สร้างตาราง complaints อัตโนมัติ
+    // 🛠️ 1. สร้างตาราง complaints อัตโนมัติ
     const createComplaintsTable = `
         CREATE TABLE IF NOT EXISTS complaints (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -76,9 +76,11 @@ db.connect((err) => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `;
-    db.query(createComplaintsTable);
+    db.query(createComplaintsTable, (err) => {
+        if (err) console.error("❌ สร้างตาราง complaints ไม่สำเร็จ:", err.message);
+    });
 
-    // 🛠️ สร้างตาราง admins และเพิ่ม Admin เริ่มต้นให้อัตโนมัติ
+    // 🛠️ 2. สร้างตาราง admins และเพิ่ม Admin เริ่มต้นให้อัตโนมัติ
     const createAdminsTable = `
         CREATE TABLE IF NOT EXISTS admins (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -92,16 +94,17 @@ db.connect((err) => {
     `;
     db.query(createAdminsTable, (tableErr) => {
         if (!tableErr) {
-            // สร้างบัญชีผู้ใช้ Admin เริ่มต้น (Username: admin / Password: admin)
             const insertDefaultAdmin = `
                 INSERT IGNORE INTO admins (username, password, name, email) 
                 VALUES ('admin', 'admin', 'ผู้ดูแลระบบ', 'admin@school.com')
             `;
             db.query(insertDefaultAdmin);
+        } else {
+            console.error("❌ สร้างตาราง admins ไม่สำเร็จ:", tableErr.message);
         }
     });
 
-    // 🛠️ สร้างตาราง admin_login_logs อัตโนมัติ
+    // 🛠️ 3. สร้างตาราง admin_login_logs อัตโนมัติ
     const createLogsTable = `
         CREATE TABLE IF NOT EXISTS admin_login_logs (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -111,7 +114,9 @@ db.connect((err) => {
             login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `;
-    db.query(createLogsTable);
+    db.query(createLogsTable, (err) => {
+        if (err) console.error("❌ สร้างตาราง admin_login_logs ไม่สำเร็จ:", err.message);
+    });
 });
 
 // 🔑 1. API สำหรับการเข้าสู่ระบบ (Login)
@@ -200,7 +205,7 @@ app.post('/api/complaints', upload.single('image'), (req, res) => {
     const category = body.category || 'ทั่วไป';
     const description = body.description || body.detail || ''; 
     const reporter_name = body.reporter_name || null;
-    const reporter_phone = body.student_id || null; 
+    const reporter_phone = body.student_id || body.reporter_phone || null; 
     const is_anonymous = body.is_anonymous !== undefined ? parseInt(body.is_anonymous) : 0;
     
     const image_path = req.file ? req.file.path.replace(/\\/g, '/') : null; 
@@ -216,6 +221,7 @@ app.post('/api/complaints', upload.single('image'), (req, res) => {
 
         res.json({ success: true, message: "ส่งเรื่องร้องเรียนสำเร็จเรียบร้อยแล้ว!" });
 
+        // 📲 แจ้งเตือนเข้า Telegram (Background Process)
         try {
             const botToken = process.env.TELEGRAM_BOT_TOKEN;
             const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -256,7 +262,7 @@ app.get('/api/complaints', (req, res) => {
     });
 });
 
-// 📊 API สำหรับดาวน์โหลด CSV
+// 📊 API สำหรับดาวน์โหลด CSV (รองรับภาษาไทย + ป้องกันฟอร์แมตพัง)
 app.get('/api/complaints/download-excel', (req, res) => {
     const sql = "SELECT * FROM complaints ORDER BY category ASC, id DESC";
     
@@ -269,22 +275,23 @@ app.get('/api/complaints/download-excel', (req, res) => {
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filename=complaints_report.csv');
 
-        let csvContent = '\uFEFF';
+        let csvContent = '\uFEFF'; // BOM สำหรับให้ Excel อ่านภาษาไทยถูก
         csvContent += 'ลำดับ,หมวดหมู่/แผนก,หัวข้อเรื่องร้องเรียน,รายละเอียดเรื่อง,ชื่อผู้แจ้งเรื่อง,เบอร์โทร/รหัสนักเรียน,สถานะข้อมูล\n';
 
         results.forEach((item) => {
-            const name = item.is_anonymous === 1 ? 'ไม่เปิดเผยตัวตน' : (item.reporter_name || 'ไม่ระบุชื่อ');
-            const phone = item.reporter_phone || '-';
-            const detail = item.description ? item.description.replace(/\n/g, " ") : '-';
+            const name = (item.is_anonymous === 1 ? 'ไม่เปิดเผยตัวตน' : (item.reporter_name || 'ไม่ระบุชื่อ')).replace(/"/g, '""');
+            const phone = (item.reporter_phone || '-').replace(/"/g, '""');
+            const detail = (item.description ? item.description.replace(/\n/g, " ") : '-').replace(/"/g, '""');
+            const title = (item.title || '').replace(/"/g, '""');
 
-            csvContent += `"${item.id}","${item.category}","${item.title}","${detail}","${name}","${phone}","${item.status}"\n`;
+            csvContent += `"${item.id}","${item.category}","${title}","${detail}","${name}","${phone}","${item.status}"\n`;
         });
 
         res.send(csvContent);
     });
 });
 
-// 🔄 5. API สำหรับอัปเดตสถานะ
+// 🔄 API สำหรับอัปเดตสถานะ
 app.put('/api/complaints/:id/status', (req, res) => {
     const { id } = req.params;
     const { status } = req.body; 
@@ -305,7 +312,7 @@ app.put('/api/complaints/:id/status', (req, res) => {
     });
 });
 
-// 🚀 สั่งรัน Express
+// 🚀 สั่งรัน Express Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
