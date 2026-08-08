@@ -40,7 +40,6 @@
         <h1>ระบบจัดการเรื่องร้องเรียน (ผู้ดูแลระบบ) วิทยาลัยเทคนิควังน้ำเย็น</h1>
         
         <div style="display: flex; align-items: center; gap: 15px;">
-            <!-- โครงสร้างโปรไฟล์สำหรับคลิกเปลี่ยนรูปภาพ -->
             <div class="admin-profile" style="cursor: pointer;" onclick="triggerAvatarUpload()" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์">
                 <img id="currentAdminAvatar" src="https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff" class="admin-avatar" alt="Admin Avatar">
                 <span id="currentAdminName" class="admin-name">กำลังโหลด...</span>
@@ -110,15 +109,24 @@
     </div>
 
     <script>
-        // 🌟 เปลี่ยน API Path เป็น Relative Path ให้รองรับได้ทุก Domain/Host
         const API_URL = '/api/complaints';
         const LOGS_API_URL = '/api/admin/login-logs';
 
-        // Helper ฟังก์ชันสำหรับสร้าง URL รูปภาพให้ถูกต้อง
+        // 🌟 ปรับแก้ฟังก์ชันดึง URL รูปภาพให้ยืดหยุ่นและป้องกันรูปแตก
         function resolveImageUrl(path) {
             if (!path) return '';
+            // ถ้าเป็น Link เต็มอยู่แล้วให้ใช้ตรงๆ
             if (path.startsWith('http://') || path.startsWith('https://')) return path;
-            return path.startsWith('/') ? path : `/${path}`;
+            
+            // แปลง Backslash จาก Windows ให้เป็น Forward slash (/)
+            let cleanPath = path.replace(/\\/g, '/');
+            
+            // ตัด / ที่อยู่หน้าสุดออกก่อน
+            if (cleanPath.startsWith('/')) {
+                cleanPath = cleanPath.substring(1);
+            }
+            
+            return `/${cleanPath}`;
         }
 
         // 📥 1. โหลดข้อมูลเรื่องร้องเรียน
@@ -143,7 +151,7 @@
                         
                         const imgUrl = resolveImageUrl(item.image_path);
                         const imageDisplay = item.image_path 
-                            ? `<a href="${imgUrl}" target="_blank"><img src="${imgUrl}" class="img-thumb"></a>`
+                            ? `<a href="${imgUrl}" target="_blank"><img src="${imgUrl}" class="img-thumb" onerror="this.parentElement.innerHTML='<span class=\'no-img\'>โหลดรูปไม่สำเร็จ</span>'"></a>`
                             : `<span class="no-img">ไม่มีรูปแนบ</span>`;
 
                         const tr = document.createElement('tr');
@@ -220,7 +228,7 @@
             }
         }
 
-        // 📥 5. โหลดประวัติการล็อกอินแสดงที่ตารางล่าง
+        // 📥 5. โหลดประวัติการล็อกอิน
         function loadLoginLogs() {
             fetch(LOGS_API_URL)
                 .then(res => res.json())
@@ -246,7 +254,7 @@
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td style="text-align: center; font-weight: 500; color: #64748b;">${index + 1}</td>
-                            <td><img src="${avatarImg}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0;"></td>
+                            <td><img src="${avatarImg}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0;" onerror="this.src='https://ui-avatars.com/api/?name=Admin&background=cbd5e1&color=475569'"></td>
                             <td><strong>${log.admin_name || 'ไม่ทราบชื่อ'}</strong></td>
                             <td>${log.admin_email || '-'}</td>
                             <td style="color: #4f46e5; font-weight: 500;">${formattedLogTime}</td>
@@ -259,17 +267,13 @@
                 });
         }
 
-        // 📸 6. ฟังก์ชันสั่งให้กล่องเลือกไฟล์เด้งขึ้นมาเมื่อคลิกที่โปรไฟล์
+        // 📸 6. คลิกเปลี่ยนรูปโปรไฟล์
         function triggerAvatarUpload() {
             const fileInput = document.getElementById('avatarFileInput');
-            if (fileInput) {
-                fileInput.click();
-            } else {
-                console.error("❌ ไม่พบแท็ก input ที่มี id='avatarFileInput'");
-            }
+            if (fileInput) fileInput.click();
         }
 
-        // 📤 7. ฟังก์ชันอัปเดตรูปโปรไฟล์เมื่อแอดมินเลือกรูปภาพเสร็จแล้ว
+        // 📤 7. อัปเดตรูปโปรไฟล์
         function uploadNewAvatar(input) {
             if (!input.files || !input.files[0]) return;
 
@@ -295,14 +299,10 @@
             .then(data => {
                 if (data.success) {
                     alert('🎉 เปลี่ยนรูปโปรไฟล์สำเร็จแล้วครับ!');
-                    
                     const fullAvatarUrl = resolveImageUrl(data.avatar_url);
-                        
                     document.getElementById('currentAdminAvatar').src = fullAvatarUrl;
-                    
                     activeAdmin.avatar_url = data.avatar_url;
                     localStorage.setItem('adminUser', JSON.stringify(activeAdmin));
-                    
                     loadLoginLogs();
                 } else {
                     alert('❌ อัปโหลดรูปภาพล้มเหลว: ' + (data.error || 'เกิดข้อผิดพลาด'));
