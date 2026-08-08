@@ -60,7 +60,8 @@
             const passwordInput = document.getElementById('password').value;
 
             try {
-                const response = await fetch('http://localhost:3000/api/login', {
+                // 🌟 แก้ไขจุดนี้: เปลี่ยนจาก 'http://localhost:3000/api/login' เป็น '/api/login'
+                const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: usernameInput, password: passwordInput })
@@ -71,6 +72,7 @@
                 if (result.success) {
                     // 🌟 บันทึกข้อมูลแอดมินเก็บไว้ในเครื่องเบราว์เซอร์ใช้งานจริง
                     const adminData = {
+                        username: result.admin.username || usernameInput,
                         name: result.admin.name,
                         email: result.admin.email,
                         avatar_url: result.admin.avatar_url
