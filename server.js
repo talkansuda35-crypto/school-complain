@@ -60,6 +60,58 @@ db.connect((err) => {
         return;
     }
     console.log('💻 เชื่อมต่อฐานข้อมูลสำเร็จ!');
+
+    // 🛠️ สร้างตาราง complaints อัตโนมัติถ้าหากยังไม่มี
+    const createComplaintsTable = `
+        CREATE TABLE IF NOT EXISTS complaints (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            description TEXT,
+            reporter_name VARCHAR(255) DEFAULT NULL,
+            reporter_phone VARCHAR(100) DEFAULT NULL,
+            is_anonymous TINYINT(1) DEFAULT 0,
+            image_path VARCHAR(255) DEFAULT NULL,
+            status VARCHAR(50) DEFAULT 'รอการดำเนินการ',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `;
+    db.query(createComplaintsTable, (tableErr) => {
+        if (tableErr) console.error('❌ สร้างตาราง complaints ไม่สำเร็จ:', tableErr);
+        else console.log('✅ ตรวจสอบ/สร้างตาราง complaints เรียบร้อย!');
+    });
+
+    // 🛠️ สร้างตาราง admins อัตโนมัติ
+    const createAdminsTable = `
+        CREATE TABLE IF NOT EXISTS admins (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(100) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) DEFAULT NULL,
+            avatar_url VARCHAR(255) DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `;
+    db.query(createAdminsTable, (tableErr) => {
+        if (tableErr) console.error('❌ สร้างตาราง admins ไม่สำเร็จ:', tableErr);
+        else console.log('✅ ตรวจสอบ/สร้างตาราง admins เรียบร้อย!');
+    });
+
+    // 🛠️ สร้างตาราง admin_login_logs อัตโนมัติ
+    const createLogsTable = `
+        CREATE TABLE IF NOT EXISTS admin_login_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            admin_name VARCHAR(255) NOT NULL,
+            admin_email VARCHAR(255) DEFAULT NULL,
+            avatar_url VARCHAR(255) DEFAULT NULL,
+            login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `;
+    db.query(createLogsTable, (tableErr) => {
+        if (tableErr) console.error('❌ สร้างตาราง admin_login_logs ไม่สำเร็จ:', tableErr);
+        else console.log('✅ ตรวจสอบ/สร้างตาราง admin_login_logs เรียบร้อย!');
+    });
 });
 
 // 🔑 1. API สำหรับการเข้าสู่ระบบ (Login)
@@ -160,7 +212,7 @@ app.post('/api/admin/update-avatar', uploadAvatar.single('avatar'), (req, res) =
     });
 });
 
-// 📥 3. API สำหรับส่งเรื่องร้องเรียน (ปรับปรุงให้ปลอดภัย ป้องกัน Telegram crash)
+// 📥 3. API สำหรับส่งเรื่องร้องเรียน
 app.post('/api/complaints', upload.single('image'), (req, res) => {
     const body = req.body || {}; 
     
@@ -182,10 +234,8 @@ app.post('/api/complaints', upload.single('image'), (req, res) => {
             return res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + (err.sqlMessage || err.message) });
         }
 
-        // ตอบกลับหน้าบ้านทันทีว่าสำเร็จ (จะได้ไม่รอนาน)
         res.json({ success: true, message: "ส่งเรื่องร้องเรียนสำเร็จเรียบร้อยแล้ว!" });
 
-        // สั่งส่ง Telegram แบบแยกขั้นตอน (เพื่อไม่ให้ย้อนกลับมาพังการส่งข้อมูล)
         try {
             const botToken = process.env.TELEGRAM_BOT_TOKEN;
             const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -200,7 +250,6 @@ app.post('/api/complaints', upload.single('image'), (req, res) => {
                     `👤 ผู้แจ้ง: ${displayName}\n` +
                     `📱 รหัสนักเรียน/นักศึกษา: ${reporter_phone || '-'}`;
 
-                // เรียกใช้ fetch อย่างปลอดภัย
                 if (typeof fetch !== 'undefined') {
                     fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                         method: 'POST',
