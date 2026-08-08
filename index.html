@@ -45,7 +45,8 @@
         </a>
     </div>
 
-    <img src="รูปภาพ1-removebg-preview (1).png" alt="โลโก้วิทยาลัยเทคนิควังน้ำเย็น" style="width: 145px; height: 145px; object-fit: contain; margin: 0 auto 20px auto; display: block; filter: drop-shadow(0 4px 8px rgba(107, 33, 168, 0.15));">
+    <!-- 🛠️ จุดที่ 1: ปรับ Path รูปภาพเป็น Relative Path เพื่อป้องกันรูปแตก -->
+    <img src="/รูปภาพ1-removebg-preview (1).png" alt="โลโก้วิทยาลัยเทคนิควังน้ำเย็น" style="width: 145px; height: 145px; object-fit: contain; margin: 0 auto 20px auto; display: block; filter: drop-shadow(0 4px 8px rgba(107, 33, 168, 0.15));">
 
     <div class="max-w-3xl mx-auto">
         <header class="text-center mb-10">
@@ -207,7 +208,8 @@
             }
 
             try {
-                const response = await fetch('http://localhost:3000/api/complaints', {
+                // 🛠️ จุดที่ 2: แก้ไขตรงนี้จาก 'http://localhost:3000/api/complaints' เป็น '/api/complaints'
+                const response = await fetch('/api/complaints', {
                     method: 'POST',
                     body: formData 
                 });
