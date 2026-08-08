@@ -6,7 +6,7 @@
     <title>ระบบรับเรื่องและแจ้งพฤติกรรมไม่เหมาะสมนักเรียน/นักศึกษา | วิทยาลัยเทคนิควังน้ำเย็น</title>
     
     <!-- ========================================== -->
-    <!-- 📲 Step 3: PWA Meta Tags & Manifest Link -->
+    <!-- 📲 PWA Meta Tags & Manifest Link -->
     <!-- ========================================== -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#7c3aed">
@@ -27,7 +27,6 @@
         });
       }
     </script>
-    <!-- ========================================== -->
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -38,19 +37,18 @@
 </head>
 <body class="bg-purple-50/50 text-slate-800 min-h-screen p-4 md:p-10">
     
-    <!-- ปุ่มย้อนกลับหน้าหลัก ลอยสวย ๆ อยู่มุมซ้ายบน -->
+    <!-- ปุ่มย้อนกลับหน้าหลัก -->
     <div style="position: absolute; top: 20px; left: 20px; z-index: 50;">
         <a href="home.html" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background-color: white; color: #7c3aed; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 9999px; border: 1px solid #ddd6fe; box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.08); transition: 0.2s;" onmouseover="this.style.backgroundColor='#f5f3ff'; this.style.transform='scale(1.03)'" onmouseout="this.style.backgroundColor='white'; this.style.transform='scale(1)'">
             <i class="fa-solid fa-arrow-left"></i> ย้อนกลับหน้าหลัก
         </a>
     </div>
 
-    <!-- 🛠️ จุดที่ 1: ปรับ Path รูปภาพเป็น Relative Path เพื่อป้องกันรูปแตก -->
+    <!-- โลโก้ -->
     <img src="/รูปภาพ1-removebg-preview (1).png" alt="โลโก้วิทยาลัยเทคนิควังน้ำเย็น" style="width: 145px; height: 145px; object-fit: contain; margin: 0 auto 20px auto; display: block; filter: drop-shadow(0 4px 8px rgba(107, 33, 168, 0.15));">
 
     <div class="max-w-3xl mx-auto">
         <header class="text-center mb-10">
-            <span class="text-5xl block mb-2"></span>
             <h1 class="text-3xl font-extrabold text-purple-500 tracking-wide">ระบบรับเรื่องและแจ้งพฤติกรรมไม่เหมาะสมนักเรียน/นักศึกษา</h1>
             <p class="text-purple-950 font-bold text-lg mt-1">วิทยาลัยเทคนิควังน้ำเย็น</p>
         </header>
@@ -66,13 +64,13 @@
                             <input type="text" id="reporter_name" required class="w-full p-2.5 bg-white border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-sm" placeholder="เช่น นายสมชาย ใจดี">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold mb-1 text-purple-950">รหัสนักศึกษา</label>
+                            <label class="block text-xs font-semibold mb-1 text-purple-950">รหัสนักศึกษา / เบอร์โทรศัพท์</label>
                             <input type="text" id="student_id" required class="w-full p-2.5 bg-white border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-sm" placeholder="เช่น 6630xxxxxxx">
                         </div>
                     </div>
                 </div>
 
-                <!-- 🌟 รายการสาขาวิชา -->
+                <!-- รายการสาขาวิชา -->
                 <div>
                     <label class="block text-sm font-semibold mb-2 text-purple-950">แผนกสาขาวิชา</label>
                     <select id="department" class="w-full p-3 border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
@@ -84,8 +82,8 @@
                         <option value="คอมพิวเตอร์ธุรกิจ / เทคโนโลยีธุรกิจดิจิทัล">💻 คอมพิวเตอร์ธุรกิจ / เทคโนโลยีธุรกิจดิจิทัล</option>
                         <option value="การบัญชี">📊 การบัญชี</option>
                         <option value="การตลาด">📈 การตลาด</option>
-                        <option value="สาระสนเทศ">💻 สาระสนเทศ</option>
-                        <option value="การจัดการสำนักงานธุระกิจดิจิทัล">📊 การจัดการสำนักงานธุระกิจดิจิทัล</option>
+                        <option value="สารสนเทศ">💻 สารสนเทศ</option>
+                        <option value="การจัดการสำนักงานธุรกิจดิจิทัล">📊 การจัดการสำนักงานธุรกิจดิจิทัล</option>
                     </select>
                 </div>
 
@@ -113,11 +111,11 @@
                 </div>
 
                 <div class="flex items-center gap-3 p-4 bg-purple-50/40 rounded-lg border border-purple-100">
-                    <input type="checkbox" id="is_anonymous" class="w-5 h-5 accent-purple-600">
-                    <label for="is_anonymous" class="text-sm font-medium text-purple-950">ต้องการปกปิดตัวตน (แอดมินเห็นข้อมูล แต่จะไม่โชว์ต่อสาธารณะ)</label>
+                    <input type="checkbox" id="is_anonymous" class="w-5 h-5 accent-purple-600 cursor-pointer">
+                    <label for="is_anonymous" class="text-sm font-medium text-purple-950 cursor-pointer">ต้องการปกปิดตัวตน (แอดมินเห็นข้อมูล แต่จะไม่โชว์ต่อสาธารณะ)</label>
                 </div>
 
-                <button type="submit" class="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition duration-200 shadow-md cursor-pointer">
+                <button type="submit" id="submitBtn" class="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition duration-200 shadow-md cursor-pointer">
                     ส่งเรื่องร้องเรียน
                 </button>
             </form>
@@ -130,6 +128,7 @@
         </main>
     </div>
 
+    <!-- Status Modal -->
     <div id="statusModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 transition-all duration-300">
         <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden text-center shadow-2xl border border-purple-50 animate-in fade-in zoom-in-95 duration-200">
             <div id="modalHeader" class="p-8 text-white flex flex-col items-center justify-center gap-3">
@@ -190,12 +189,18 @@
         document.getElementById('complaintForm').addEventListener('submit', async (e) => {
             e.preventDefault(); 
             
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'กำลังส่งข้อมูล...';
+
             const formData = new FormData();
             
             const reporterName = document.getElementById('reporter_name').value;
             const dept = document.getElementById('department').value;
             formData.append('reporter_name', `${reporterName} (${dept})`);
             
+            // ใช้เป็น reporter_phone หรือ student_id ตามการออกแบบ DB ฝั่ง Backend
+            formData.append('reporter_phone', document.getElementById('student_id').value); 
             formData.append('student_id', document.getElementById('student_id').value); 
             formData.append('title', document.getElementById('title').value);
             formData.append('category', document.getElementById('category').value);
@@ -208,20 +213,22 @@
             }
 
             try {
-                // 🛠️ จุดที่ 2: แก้ไขตรงนี้จาก 'http://localhost:3000/api/complaints' เป็น '/api/complaints'
                 const response = await fetch('/api/complaints', {
                     method: 'POST',
                     body: formData 
                 });
 
                 const result = await response.json();
-                if (result.success) {
+                if (response.ok && result.success) {
                     showModal(true, "ระบบได้รับการแจ้งเรื่องเสร็จสิ้น ข้อมูลของท่านถูกส่งต่อไปยังเจ้าหน้าที่ผู้เกี่ยวข้องแล้ว");
                 } else {
-                    showModal(false, result.message);
+                    showModal(false, result.message || result.error || "ไม่สามารถส่งข้อมูลได้");
                 }
             } catch (error) {
                 showModal(false, "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'ส่งเรื่องร้องเรียน';
             }
         });
     </script>
