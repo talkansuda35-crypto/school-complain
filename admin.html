@@ -110,8 +110,16 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000/api/complaints';
-        const LOGS_API_URL = 'http://localhost:3000/api/admin/login-logs';
+        // 🌟 เปลี่ยน API Path เป็น Relative Path ให้รองรับได้ทุก Domain/Host
+        const API_URL = '/api/complaints';
+        const LOGS_API_URL = '/api/admin/login-logs';
+
+        // Helper ฟังก์ชันสำหรับสร้าง URL รูปภาพให้ถูกต้อง
+        function resolveImageUrl(path) {
+            if (!path) return '';
+            if (path.startsWith('http://') || path.startsWith('https://')) return path;
+            return path.startsWith('/') ? path : `/${path}`;
+        }
 
         // 📥 1. โหลดข้อมูลเรื่องร้องเรียน
         function loadComplaints() {
@@ -133,8 +141,9 @@
                         const phoneDisplay = item.is_anonymous === 1 ? '<span style="color: #64748b; font-style: italic;">ปกปิดตัวตน</span>' : (item.reporter_phone || '-');
                         const detailDisplay = item.description || '-';
                         
+                        const imgUrl = resolveImageUrl(item.image_path);
                         const imageDisplay = item.image_path 
-                            ? `<a href="http://localhost:3000/${item.image_path}" target="_blank"><img src="http://localhost:3000/${item.image_path}" class="img-thumb"></a>`
+                            ? `<a href="${imgUrl}" target="_blank"><img src="${imgUrl}" class="img-thumb"></a>`
                             : `<span class="no-img">ไม่มีรูปแนบ</span>`;
 
                         const tr = document.createElement('tr');
@@ -188,7 +197,7 @@
 
         // 📊 3. ดาวน์โหลด Excel
         function downloadExcel() {
-            window.open('http://localhost:3000/api/complaints/download-excel', '_blank');
+            window.open('/api/complaints/download-excel', '_blank');
         }
 
         // 🔒 4. ระบบความปลอดภัยตรวจสอบแอดมิน
@@ -201,11 +210,7 @@
                 let topAvatarImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(activeAdmin.name || 'Admin')}&background=c084fc&color=fff&bold=true`;
                 
                 if (activeAdmin.avatar_url) {
-                    if (activeAdmin.avatar_url.startsWith('http')) {
-                        topAvatarImg = activeAdmin.avatar_url;
-                    } else {
-                        topAvatarImg = `http://localhost:3000/${activeAdmin.avatar_url}`;
-                    }
+                    topAvatarImg = resolveImageUrl(activeAdmin.avatar_url);
                 }
                 document.getElementById('currentAdminAvatar').src = topAvatarImg;
             } else {
@@ -235,11 +240,7 @@
                         let avatarImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(log.admin_name || 'Admin')}&background=cbd5e1&color=475569`;
 
                         if (log.avatar_url) {
-                            if (log.avatar_url.startsWith('http')) {
-                                avatarImg = log.avatar_url;
-                            } else {
-                                avatarImg = `http://localhost:3000/${log.avatar_url}`;
-                            }
+                            avatarImg = resolveImageUrl(log.avatar_url);
                         }
 
                         const tr = document.createElement('tr');
@@ -280,14 +281,13 @@
                 return;
             }
 
-            // ดึงค่าระบุตัวตนส่งไปให้หลังบ้าน
             const adminIdentifier = activeAdmin.username || activeAdmin.email || activeAdmin.name || 'Admin';
 
             const formData = new FormData();
             formData.append('avatar', file);
             formData.append('username', adminIdentifier);
 
-            fetch('http://localhost:3000/api/admin/update-avatar', {
+            fetch('/api/admin/update-avatar', {
                 method: 'POST',
                 body: formData
             })
@@ -296,18 +296,13 @@
                 if (data.success) {
                     alert('🎉 เปลี่ยนรูปโปรไฟล์สำเร็จแล้วครับ!');
                     
-                    // ปรับรูปภาพบนหน้าจอทันที
-                    const fullAvatarUrl = data.avatar_url.startsWith('http') 
-                        ? data.avatar_url 
-                        : `http://localhost:3000/${data.avatar_url}`;
+                    const fullAvatarUrl = resolveImageUrl(data.avatar_url);
                         
                     document.getElementById('currentAdminAvatar').src = fullAvatarUrl;
                     
-                    // อัปเดตข้อมูลเก็บไว้ใน LocalStorage
                     activeAdmin.avatar_url = data.avatar_url;
                     localStorage.setItem('adminUser', JSON.stringify(activeAdmin));
                     
-                    // สั่งโหลดตารางล็อกอินด้านล่างใหม่ให้รูปอัปเดตตามด้วย
                     loadLoginLogs();
                 } else {
                     alert('❌ อัปโหลดรูปภาพล้มเหลว: ' + (data.error || 'เกิดข้อผิดพลาด'));
