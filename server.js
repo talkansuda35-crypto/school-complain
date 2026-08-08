@@ -51,7 +51,7 @@ const db = mysql.createConnection({
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'school_complain',
     port: process.env.DB_PORT || 3306,
-    ssl: process.env.DB_HOST ? { rejectUnauthorized: false } : false // 👈 เพิ่ม SSL เพื่อรองรับ Aiven Cloud
+    ssl: process.env.DB_HOST ? { rejectUnauthorized: false } : false // 👈 รองรับ Aiven Cloud
 });
 
 db.connect((err) => {
@@ -160,7 +160,7 @@ app.post('/api/admin/update-avatar', uploadAvatar.single('avatar'), (req, res) =
     });
 });
 
-// 📥 3. API สำหรับส่งเรื่องร้องเรียน
+// 📥 3. API สำหรับส่งเรื่องร้องเรียน (ปรับปรุงให้ปลอดภัย ป้องกัน Telegram crash)
 app.post('/api/complaints', upload.single('image'), (req, res) => {
     const body = req.body || {}; 
     
@@ -179,43 +179,39 @@ app.post('/api/complaints', upload.single('image'), (req, res) => {
     db.query(sql, [title, category, description, reporter_name, reporter_phone, is_anonymous, image_path], (err, result) => {
         if (err) {
             console.error("❌ เกิด Error ที่ฐานข้อมูล:", err.sqlMessage || err);
-            return res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการบันทึกข้อมูล" });
+            return res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + (err.sqlMessage || err.message) });
         }
 
-        const botToken = process.env.TELEGRAM_BOT_TOKEN || 'YOUR_TELEGRAM_BOT_TOKEN';
-        const chatId = process.env.TELEGRAM_CHAT_ID || 'YOUR_TELEGRAM_CHAT_ID';
-
-        const displayName = is_anonymous === 1 ? 'ไม่เปิดเผยตัวตน' : (reporter_name || 'ไม่ระบุชื่อ');
-        
-        const telegramMessage = 
-            `🚨 มีเรื่องร้องเรียนใหม่เข้ามาครับ!\n\n` +
-            `📌 หมวดหมู่: ${category}\n` +
-            `📝 หัวข้อ: ${title}\n` +
-            `🔍 รายละเอียด: ${description}\n` +
-            `👤 ผู้แจ้ง: ${displayName}\n` +
-            `📱 รหัสนักเรียน/นักศึกษา: ${reporter_phone || '-'}`;
-
-        if (botToken !== 'YOUR_TELEGRAM_BOT_TOKEN') {
-            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    chat_id: chatId, 
-                    text: telegramMessage
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.ok) {
-                    console.log('🔔 ยิงแจ้งเตือนผ่าน Telegram สำเร็จ!');
-                } else {
-                    console.error('❌ Telegram ตอบกลับข้อผิดพลาด:', data.description);
-                }
-            })
-            .catch(telegramErr => console.error('❌ แจ้งเตือน Telegram ล้มเหลว:', telegramErr));
-        }
-
+        // ตอบกลับหน้าบ้านทันทีว่าสำเร็จ (จะได้ไม่รอนาน)
         res.json({ success: true, message: "ส่งเรื่องร้องเรียนสำเร็จเรียบร้อยแล้ว!" });
+
+        // สั่งส่ง Telegram แบบแยกขั้นตอน (เพื่อไม่ให้ย้อนกลับมาพังการส่งข้อมูล)
+        try {
+            const botToken = process.env.TELEGRAM_BOT_TOKEN;
+            const chatId = process.env.TELEGRAM_CHAT_ID;
+
+            if (botToken && chatId) {
+                const displayName = is_anonymous === 1 ? 'ไม่เปิดเผยตัวตน' : (reporter_name || 'ไม่ระบุชื่อ');
+                const telegramMessage = 
+                    `🚨 มีเรื่องร้องเรียนใหม่เข้ามาครับ!\n\n` +
+                    `📌 หมวดหมู่: ${category}\n` +
+                    `📝 หัวข้อ: ${title}\n` +
+                    `🔍 รายละเอียด: ${description}\n` +
+                    `👤 ผู้แจ้ง: ${displayName}\n` +
+                    `📱 รหัสนักเรียน/นักศึกษา: ${reporter_phone || '-'}`;
+
+                // เรียกใช้ fetch อย่างปลอดภัย
+                if (typeof fetch !== 'undefined') {
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chat_id: chatId, text: telegramMessage })
+                    }).catch(tErr => console.error('❌ Telegram error:', tErr));
+                }
+            }
+        } catch (tgError) {
+            console.error('❌ เกิดข้อผิดพลาดในส่วน Telegram:', tgError);
+        }
     });
 });
 
