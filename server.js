@@ -3,20 +3,20 @@ const mysql = require('mysql2');
 const cors = require('cors');
 const multer = require('multer'); 
 const path = require('path');
-const fs = require('fs'); // เพิ่มเข้ามาเพื่อช่วยเช็คโฟลเดอร์อัตโนมัติ
+const fs = require('fs');
 const app = express();
 
 app.use(cors());
-app.use(express.json()); // 🌟 เปิดใช้งานเพื่อให้หลังบ้านอ่านค่า JSON จากหน้าบ้านได้
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🌟 เปิดให้หน้าบ้านสามารถดึงรูปภาพจากโฟลเดอร์นี้ไปโชว์ได้
+// 🌟 เปิดให้หน้าบ้านดึงรูปภาพไปโชว์ได้
 app.use('/uploads', express.static('uploads')); 
 
-// 📲 [Step 4 PWA] เปิดให้เรียกใช้งานไฟล์ PWA (manifest.json, sw.js, ไฟล์ HTML) ในโฟลเดอร์หลักได้
+// 📲 เปิดให้เรียกใช้งานไฟล์ PWA
 app.use(express.static('./')); 
 
-// 🌟 สร้างโฟลเดอร์ uploads อัตโนมัติถ้าหากยังไม่มีในเครื่องของน้อง
+// 🌟 สร้างโฟลเดอร์ uploads อัตโนมัติถ้าหากยังไม่มี
 const uploadDir = './uploads';
 if (!fs.existsSync(uploadDir)){
     fs.mkdirSync(uploadDir);
@@ -33,25 +33,25 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// 📸 2. ตั้งค่าการเก็บรูปภาพโปรไฟล์แอดมิน (🆕 เพิ่มใหม่สำหรับปุ่ม ข)
+// 📸 2. ตั้งค่าการเก็บรูปภาพโปรไฟล์แอดมิน
 const avatarStorage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'uploads/'); 
     },
     filename: function (req, file, cb) {
-        // ตั้งชื่อไฟล์ระบุชัดเจนว่าเป็นรูปโปรไฟล์แอดมินตามด้วยรหัสเวลากันซ้ำ
         cb(null, 'avatar-' + Date.now() + path.extname(file.originalname)); 
     }
 });
 const uploadAvatar = multer({ storage: avatarStorage });
 
-
-// 🔌 เชื่อมต่อฐานข้อมูล MySQL
+// 🔌 เชื่อมต่อฐานข้อมูล MySQL (ปรับรองรับทั้ง Local และ Render + Aiven)
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'school_complain' 
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'school_complain',
+    port: process.env.DB_PORT || 3306,
+    ssl: process.env.DB_HOST ? { rejectUnauthorized: false } : false // 👈 เพิ่ม SSL เพื่อรองรับ Aiven Cloud
 });
 
 db.connect((err) => {
@@ -62,7 +62,7 @@ db.connect((err) => {
     console.log('💻 เชื่อมต่อฐานข้อมูลสำเร็จ!');
 });
 
-// 🔑 1. API สำหรับการเข้าสู่ระบบ (Login) - (✨ ปรับปรุงส่ง username กลับไปให้หน้าบ้านเอาไปใช้ต่อ)
+// 🔑 1. API สำหรับการเข้าสู่ระบบ (Login)
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     const sql = "SELECT id, username, name, email, avatar_url FROM admins WHERE username = ? AND password = ?";
@@ -74,11 +74,8 @@ app.post('/api/login', (req, res) => {
         
         if (result.length > 0) {
             const admin = result[0];
-            
-            // ตรวจสอบว่าแอดมินมีรูปโปรไฟล์ไหม ถ้าไม่มีให้สร้างลิงก์รูปภาพสวยๆ หรือใส่รูป Default ไว้
             const finalAvatar = admin.avatar_url ? admin.avatar_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(admin.name)}&background=4f46e5&color=fff&bold=true`;
 
-            // บันทึกประวัติการเข้าใช้งานลงตาราง logs พร้อมพาธรูปภาพที่ถูกต้อง
             const logSql = "INSERT INTO admin_login_logs (admin_name, admin_email, avatar_url) VALUES (?, ?, ?)";
             db.query(logSql, [admin.name, admin.email, finalAvatar], (logErr) => {
                 if (logErr) console.error("❌ บันทึกประวัติล็อกอินล้มเหลว:", logErr);
@@ -88,7 +85,7 @@ app.post('/api/login', (req, res) => {
                 success: true,
                 message: "เข้าสู่ระบบสำเร็จ",
                 admin: { 
-                    username: admin.username, // 🆕 ส่ง username ไปเก็บใน LocalStorage ของหน้าบ้าน
+                    username: admin.username,
                     name: admin.name, 
                     email: admin.email, 
                     avatar_url: admin.avatar_url 
@@ -100,15 +97,9 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-
-// ==========================================
-// ⏰ API สำหรับดึงประวัติการเข้าใช้งาน (เวอร์ชันลดความซับซ้อน ป้องกัน Error)
-// ==========================================
+// ⏰ API ดึงประวัติการเข้าใช้งาน
 app.get('/api/admin/login-logs', (req, res) => {
-    const sql = `
-        SELECT * FROM admin_login_logs 
-        ORDER BY login_time DESC
-    `;
+    const sql = `SELECT * FROM admin_login_logs ORDER BY login_time DESC`;
     
     db.query(sql, (err, results) => {
         if (err) {
@@ -119,9 +110,7 @@ app.get('/api/admin/login-logs', (req, res) => {
     });
 });
 
-// ==========================================
-// 📸 API อัปเดตรูปโปรไฟล์แอดมิน (เวอร์ชันอัปเกรด ค้นหาทุกช่องทางกันพัง)
-// ==========================================
+// 📸 API อัปเดตรูปโปรไฟล์แอดมิน
 app.post('/api/admin/update-avatar', uploadAvatar.single('avatar'), (req, res) => {
     const { username } = req.body;
     
@@ -133,10 +122,8 @@ app.post('/api/admin/update-avatar', uploadAvatar.single('avatar'), (req, res) =
         return res.status(400).json({ success: false, error: 'ไม่พบข้อมูลผู้ใช้งานสำหรับอัปเดต' });
     }
 
-    // จัดรูปพาธไฟล์ให้ถูกต้อง
     const avatarUrl = req.file.path.replace(/\\/g, "/"); 
 
-    // ใช้คำสั่ง SQL ตรวจสอบและอัปเดต ไม่ว่าจะแมตช์กับ username, name หรือ email ช่องทางใดช่องทางหนึ่ง
     const sql = `
         UPDATE admins 
         SET avatar_url = ? 
@@ -149,7 +136,6 @@ app.post('/api/admin/update-avatar', uploadAvatar.single('avatar'), (req, res) =
             return res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาดในการบันทึกฐานข้อมูล' });
         }
         
-        // ถ้ายาสตยังอัปเดตไม่ได้ ให้ลองอัปเดตแถวแรกในตารางแอดมินเลย (สำหรับระบบที่มีแอดมินคนเดียว)
         if (result.affectedRows === 0) {
             const fallbackSql = "UPDATE admins SET avatar_url = ? LIMIT 1";
             db.query(fallbackSql, [avatarUrl], (fallbackErr, fallbackResult) => {
@@ -174,7 +160,7 @@ app.post('/api/admin/update-avatar', uploadAvatar.single('avatar'), (req, res) =
     });
 });
 
-// 📥 3. API สำหรับส่งเรื่องร้องเรียน (ปรับแก้ chatId และข้อความ Telegram)
+// 📥 3. API สำหรับส่งเรื่องร้องเรียน
 app.post('/api/complaints', upload.single('image'), (req, res) => {
     const body = req.body || {}; 
     
@@ -196,16 +182,11 @@ app.post('/api/complaints', upload.single('image'), (req, res) => {
             return res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการบันทึกข้อมูล" });
         }
 
-        // ==========================================
-        // 🚨 กำหนด Token และ Chat ID สำหรับ Telegram
-        // ==========================================
         const botToken = process.env.TELEGRAM_BOT_TOKEN || 'YOUR_TELEGRAM_BOT_TOKEN';
         const chatId = process.env.TELEGRAM_CHAT_ID || 'YOUR_TELEGRAM_CHAT_ID';
-        // ==========================================
 
         const displayName = is_anonymous === 1 ? 'ไม่เปิดเผยตัวตน' : (reporter_name || 'ไม่ระบุชื่อ');
         
-        // จัดรูปแบบข้อความแบบเรียบง่าย (ไม่ใช้ Markdown เพื่อป้องกันข้อผิดพลาดในการยิง API)
         const telegramMessage = 
             `🚨 มีเรื่องร้องเรียนใหม่เข้ามาครับ!\n\n` +
             `📌 หมวดหมู่: ${category}\n` +
@@ -214,7 +195,6 @@ app.post('/api/complaints', upload.single('image'), (req, res) => {
             `👤 ผู้แจ้ง: ${displayName}\n` +
             `📱 รหัสนักเรียน/นักศึกษา: ${reporter_phone || '-'}`;
 
-        // โค้ดยิงแจ้งเตือนเข้า Telegram
         if (botToken !== 'YOUR_TELEGRAM_BOT_TOKEN') {
             fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
@@ -239,9 +219,7 @@ app.post('/api/complaints', upload.single('image'), (req, res) => {
     });
 });
 
-// ==========================================
-// 📤 API สำหรับดึงรายการเรื่องร้องเรียนทั้งหมดไปแสดงในหน้า Admin
-// ==========================================
+// 📤 API ดึงรายการเรื่องร้องเรียนทั้งหมด
 app.get('/api/complaints', (req, res) => {
     const sql = `SELECT * FROM complaints ORDER BY created_at DESC`;
     db.query(sql, (err, results) => {
@@ -253,7 +231,7 @@ app.get('/api/complaints', (req, res) => {
     });
 });
 
-// 📊 API สำหรับดาวน์โหลดข้อมูลแยกตามแผนก/หมวดหมู่
+// 📊 API สำหรับดาวน์โหลด CSV
 app.get('/api/complaints/download-excel', (req, res) => {
     const sql = "SELECT * FROM complaints ORDER BY category ASC, id DESC";
     
@@ -281,7 +259,7 @@ app.get('/api/complaints/download-excel', (req, res) => {
     });
 });
 
-// 🔄 5. API สำหรับการอัปเดตสถานะระบบเรื่องร้องเรียน จากหน้าแอดมิน
+// 🔄 5. API สำหรับอัปเดตสถานะ
 app.put('/api/complaints/:id/status', (req, res) => {
     const { id } = req.params;
     const { status } = req.body; 
@@ -303,6 +281,8 @@ app.put('/api/complaints/:id/status', (req, res) => {
     });
 });
 
-app.listen(3000, () => {
-    console.log('🚀 Server is running on port 3000');
+// 🚀 สั่งรัน Express ผ่าน Dynamic Port ของ Render
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
 });
